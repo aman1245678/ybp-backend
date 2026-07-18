@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <!-- Enforce XML documentation across the public domain surface. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <!--
+    The Domain layer is intentionally dependency-free: no EF Core, ASP.NET,
+    Infrastructure, Persistence, MediatR, AutoMapper or FluentValidation.
+    It has NO project references and must compile as a standalone assembly.
+  -->
+
+</Project>

@@ -1,0 +1,6 @@
+@YBP.Api_HostAddress = http://localhost:5041
+
+GET {{YBP.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
