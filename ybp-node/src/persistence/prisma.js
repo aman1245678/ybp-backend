@@ -1,30 +1,29 @@
-import 'dotenv/config';
+// Allow Node to accept Render internal self-signed TLS certificates for PostgreSQL
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
-/**
- * Azure / URL parsers treat `@` in the password as the host separator.
- * `Aman@543820` must become `Aman%40543820` in DATABASE_URL.
- */
 export function encodeDatabaseUrl(raw) {
   if (!raw) return raw;
-  const schemeIdx = raw.indexOf('://');
-  if (schemeIdx === -1) return raw;
-  const lastAt = raw.lastIndexOf('@');
-  if (lastAt === -1) return raw;
-  const userPass = raw.slice(schemeIdx + 3, lastAt);
-  const colon = userPass.indexOf(':');
-  if (colon === -1) return raw;
-  const user = userPass.slice(0, colon);
-  const password = userPass.slice(colon + 1);
-  const encodedPass =
-    password.includes('@') || password.includes('/') || password.includes('#')
-      ? encodeURIComponent(password)
-      : password;
-  return ensureSsl(`${raw.slice(0, schemeIdx + 3)}${user}:${encodedPass}${raw.slice(lastAt)}`);
-}
-
-function ensureSsl(url) {
-  if (/sslmode=/i.test(url)) return url;
-  return url.includes('?') ? `${url}&sslmode=require` : `${url}?sslmode=require`;
+  let url = raw;
+  const schemeIdx = url.indexOf('://');
+  if (schemeIdx !== -1) {
+    const lastAt = url.lastIndexOf('@');
+    if (lastAt !== -1) {
+      const userPass = url.slice(schemeIdx + 3, lastAt);
+      const colon = userPass.indexOf(':');
+      if (colon !== -1) {
+        const user = userPass.slice(0, colon);
+        const password = userPass.slice(colon + 1);
+        const encodedPass =
+          password.includes('@') || password.includes('/') || password.includes('#')
+            ? encodeURIComponent(password)
+            : password;
+        url = `${url.slice(0, schemeIdx + 3)}${user}:${encodedPass}${url.slice(lastAt)}`;
+      }
+    }
+  }
+  // Strip sslmode query params so pg library uses our explicit ssl object instead of libpq defaults
+  url = url.replace(/([?&])sslmode=[^&]+(&|$)/gi, '$1').replace(/[?&]$/, '');
+  return url;
 }
 
 let clientPromise = null;
@@ -40,7 +39,9 @@ async function getClient() {
       const Pool = pgModule.default?.Pool || pgModule.Pool;
       const pool = new Pool({
         connectionString,
-        ssl: { rejectUnauthorized: false },
+        ssl: {
+          rejectUnauthorized: false,
+        },
       });
       const { PrismaPg } = await import('@prisma/adapter-pg');
       const { PrismaClient } = await import('../generated/prisma/client.ts');
