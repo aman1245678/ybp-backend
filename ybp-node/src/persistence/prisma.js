@@ -38,7 +38,10 @@ async function getClient() {
       }
       const { PrismaPg } = await import('@prisma/adapter-pg');
       const { PrismaClient } = await import('../generated/prisma/client.ts');
-      const adapter = new PrismaPg({ connectionString });
+      const adapter = new PrismaPg({ 
+        connectionString,
+        ssl: { rejectUnauthorized: false }
+      });
       return new PrismaClient({ adapter });
     })();
   }
