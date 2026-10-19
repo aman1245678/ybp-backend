@@ -36,12 +36,15 @@ async function getClient() {
       if (!connectionString) {
         throw new Error('DATABASE_URL is not set.');
       }
+      const pgModule = await import('pg');
+      const Pool = pgModule.default?.Pool || pgModule.Pool;
+      const pool = new Pool({
+        connectionString,
+        ssl: { rejectUnauthorized: false },
+      });
       const { PrismaPg } = await import('@prisma/adapter-pg');
       const { PrismaClient } = await import('../generated/prisma/client.ts');
-      const adapter = new PrismaPg({ 
-        connectionString,
-        ssl: { rejectUnauthorized: false }
-      });
+      const adapter = new PrismaPg(pool);
       return new PrismaClient({ adapter });
     })();
   }
