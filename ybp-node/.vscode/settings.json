@@ -1,0 +1,4 @@
+{
+    "appService.defaultWebAppToDeploy": "/subscriptions/7107dcc0-5eef-425d-8233-e2e807bfffb2/resourceGroups/yb-productions/providers/Microsoft.Web/sites/yb-api",
+    "appService.deploySubpath": "."
+}

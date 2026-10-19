@@ -1,0 +1,703 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums (mirror domain) ───────────────────────────────────────────────────
+
+enum ApplicationStatus {
+  Submitted
+  UnderReview
+  ProfileEvaluated
+  Shortlisted
+  InterviewScheduled
+  AuditionRequested
+  Selected
+  TalentPool
+  AssignmentOffered
+  Rejected
+}
+
+enum WorkflowTrack {
+  Talent
+  Casting
+  Media
+  Manpower
+}
+
+enum UserStatus {
+  Active
+  Invited
+  Suspended
+  Deactivated
+}
+
+enum RoleType {
+  Admin
+  HR
+  Recruiter
+  Talent
+  MediaProfessional
+  Client
+  Trainer
+}
+
+enum RegistrationRequestStatus {
+  Requested
+  Approved
+  Issued
+  Rejected
+}
+
+enum SignupCategory {
+  Actor
+  OtherMediaProfessional
+  TalentPoolSeeker
+  CorporateManpower
+  IndustryJobSeeker
+  CorporateTraining
+}
+
+enum WorkMode {
+  Onsite
+  Remote
+  Hybrid
+}
+
+enum Gender {
+  Unspecified
+  Female
+  Male
+  NonBinary
+  Other
+}
+
+enum CompanySize {
+  Unspecified
+  Size1To10
+  Size11To50
+  Size51To200
+  Size201To500
+  Size500Plus
+}
+
+enum FileKind {
+  Unknown
+  Pdf
+  Docx
+  Jpg
+  Png
+  Zip
+  Mp4
+}
+
+enum UploadStatus {
+  Pending
+  Uploading
+  Uploaded
+  Error
+}
+
+enum ScanStatus {
+  Pending
+  Clean
+  Infected
+  Skipped
+}
+
+enum DocumentOwnerType {
+  Unassigned
+  TalentProfile
+  CastingApplication
+  MediaProfessional
+  OutsourcingRequirement
+  Cms
+}
+
+enum DocumentPurpose {
+  Attachment
+  TalentResume
+  TalentAttachment
+  CastingPortfolio
+  MediaWorkSample
+  ManpowerAttachment
+  CmsAsset
+}
+
+enum InquiryType {
+  Contact
+  Consultation
+  Collaboration
+  TalentRegistration
+  ManpowerRequirement
+}
+
+enum LeadStatus {
+  New
+  Triaged
+  Contacted
+  Qualified
+  Converted
+  Closed
+}
+
+enum LeadSource {
+  ContactForm
+  CollaborationForm
+  TalentPortal
+  CastingPortal
+  MediaPortal
+  ManpowerPortal
+}
+
+enum NotificationChannel {
+  Sms
+  Email
+  Crm
+  WhatsApp
+  Push
+}
+
+enum NotificationStatus {
+  Queued
+  Sent
+  Failed
+  Skipped
+}
+
+enum OtpChannel {
+  Email
+  Mobile
+}
+
+enum OtpPurpose {
+  ContactForm
+  CollaborationForm
+  TalentRegistration
+  CastingApplication
+  MediaRegistration
+  ManpowerRequirement
+  AccountVerification
+}
+
+enum AuditAction {
+  Create
+  Update
+  SoftDelete
+  Restore
+  StatusChange
+  Login
+  IssueCredentials
+}
+
+// ─── Identity ────────────────────────────────────────────────────────────────
+
+model User {
+  id               String     @id @default(uuid()) @db.Uuid
+  fullName         String
+  email            String     @unique
+  mobile           String?
+  passwordHash     String?
+  status           UserStatus @default(Invited)
+  isEmailVerified  Boolean    @default(false)
+  isMobileVerified Boolean    @default(false)
+  roles            RoleType[] @default([])
+
+  refreshTokens   RefreshToken[]
+  formSubmissions FormSubmission[]
+
+  createdAtUtc DateTime  @default(now()) @db.Timestamptz(3)
+  createdBy    String?
+  updatedAtUtc DateTime? @db.Timestamptz(3)
+  updatedBy    String?
+  isDeleted    Boolean   @default(false)
+  deletedAtUtc DateTime? @db.Timestamptz(3)
+  deletedBy    String?
+  rowVersion   Int       @default(1)
+
+  @@index([status])
+  @@index([isDeleted])
+  @@map("users")
+}
+
+model RefreshToken {
+  id              String    @id @default(uuid()) @db.Uuid
+  userId          String    @db.Uuid
+  token           String    @unique
+  expiresAtUtc    DateTime  @db.Timestamptz(3)
+  createdAtUtc    DateTime  @default(now()) @db.Timestamptz(3)
+  revokedAtUtc    DateTime? @db.Timestamptz(3)
+  replacedByToken String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model Role {
+  id              String   @id @default(uuid()) @db.Uuid
+  type            RoleType @unique
+  name            String
+  permissionCodes String[] @default([])
+
+  createdAtUtc DateTime  @default(now()) @db.Timestamptz(3)
+  createdBy    String?
+  updatedAtUtc DateTime? @db.Timestamptz(3)
+  updatedBy    String?
+  isDeleted    Boolean   @default(false)
+  deletedAtUtc DateTime? @db.Timestamptz(3)
+  deletedBy    String?
+  rowVersion   Int       @default(1)
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String  @id @default(uuid()) @db.Uuid
+  code        String  @unique
+  description String?
+
+  createdAtUtc DateTime  @default(now()) @db.Timestamptz(3)
+  createdBy    String?
+  updatedAtUtc DateTime? @db.Timestamptz(3)
+  updatedBy    String?
+  isDeleted    Boolean   @default(false)
+  deletedAtUtc DateTime? @db.Timestamptz(3)
+  deletedBy    String?
+  rowVersion   Int       @default(1)
+
+  @@map("permissions")
+}
+
+model RegistrationRequest {
+  id           String                    @id @default(uuid()) @db.Uuid
+  fullName     String
+  mobile       String
+  email        String
+  category     SignupCategory
+  description  String?
+  status       RegistrationRequestStatus @default(Requested)
+  issuedUserId String?                   @db.Uuid
+
+  createdAtUtc DateTime  @default(now()) @db.Timestamptz(3)
+  createdBy    String?
+  updatedAtUtc DateTime? @db.Timestamptz(3)
+  updatedBy    String?
+  isDeleted    Boolean   @default(false)
+  deletedAtUtc DateTime? @db.Timestamptz(3)
+  deletedBy    String?
+  rowVersion   Int       @default(1)
+
+  @@index([email])
+  @@index([status])
+  @@map("registration_requests")
+}
+
+// ─── Leads ───────────────────────────────────────────────────────────────────
+
+model Lead {
+  id                  String      @id @default(uuid()) @db.Uuid
+  type                InquiryType
+  source              LeadSource
+  label               String
+  fullName            String
+  email               String?
+  mobile              String?
+  service             String?
+  requirement         String?
+  extraJson           Json?
+  status              LeadStatus  @default(New)
+  linkedApplicationId String?     @db.Uuid
+
+  createdAtUtc DateTime  @default(now()) @db.Timestamptz(3)
+  createdBy    String?
+  updatedAtUtc DateTime? @db.Timestamptz(3)
+  updatedBy    String?
+  isDeleted    Boolean   @default(false)
+  deletedAtUtc DateTime? @db.Timestamptz(3)
+  deletedBy    String?
+  rowVersion   Int       @default(1)
+
+  @@index([status])
+  @@index([type])
+  @@index([source])
+  @@index([linkedApplicationId])
+  @@map("leads")
+}
+
+// ─── Shared application status history ───────────────────────────────────────
+
+model ApplicationStatusEvent {
+  id            String            @id @default(uuid()) @db.Uuid
+  track         WorkflowTrack
+  applicationId String            @db.Uuid
+  status        ApplicationStatus
+  atUtc         DateTime          @db.Timestamptz(3)
+  note          String?
+  byUserId      String?           @db.Uuid
+
+  @@index([track, applicationId])
+  @@index([atUtc])
+  @@map("application_status_events")
+}
+
+// ─── Talent ──────────────────────────────────────────────────────────────────
+
+model TalentProfile {
+  id                    String            @id @default(uuid()) @db.Uuid
+  status                ApplicationStatus @default(Submitted)
+  category              String
+  fullName              String
+  email                 String
+  mobile                String
+  locationCity          String?
+  experienceLevel       String
+  skills                String[]          @default([])
+  availability          String[]          @default([])
+  portfolioLinks        String[]          @default([])
+  about                 String?
+  emailVerification     Json?
+  mobileVerification    Json?
+
+  createdAtUtc DateTime  @default(now()) @db.Timestamptz(3)
+  createdBy    String?
+  updatedAtUtc DateTime? @db.Timestamptz(3)
+  updatedBy    String?
+  isDeleted    Boolean   @default(false)
+  deletedAtUtc DateTime? @db.Timestamptz(3)
+  deletedBy    String?
+  rowVersion   Int       @default(1)
+
+  @@index([status])
+  @@index([email])
+  @@index([category])
+  @@map("talent_profiles")
+}
+
+// ─── Casting ─────────────────────────────────────────────────────────────────
+
+model CastingApplication {
+  id                 String            @id @default(uuid()) @db.Uuid
+  status             ApplicationStatus @default(Submitted)
+  fullName           String
+  email              String
+  mobile             String
+  dateOfBirth        DateTime?         @db.Date
+  gender             Gender            @default(Unspecified)
+  locationCity       String?
+  heightCm           Int?
+  weightKg           Int?
+  complexion         String?
+  hairColor          String?
+  eyeColor           String?
+  measurements       String?
+  experienceLevel    String
+  yearsActive        Int?
+  credits            String?
+  languages          String[]          @default([])
+  skills             String[]          @default([])
+  mediaLinks         String[]          @default([])
+  availability       String[]          @default([])
+  willingToTravel    Boolean           @default(false)
+  emailVerification  Json?
+  mobileVerification Json?
+
+  createdAtUtc DateTime  @default(now()) @db.Timestamptz(3)
+  createdBy    String?
+  updatedAtUtc DateTime? @db.Timestamptz(3)
+  updatedBy    String?
+  isDeleted    Boolean   @default(false)
+  deletedAtUtc DateTime? @db.Timestamptz(3)
+  deletedBy    String?
+  rowVersion   Int       @default(1)
+
+  @@index([status])
+  @@index([email])
+  @@map("casting_applications")
+}
+
+// ─── Media ───────────────────────────────────────────────────────────────────
+
+model MediaProfessional {
+  id                        String            @id @default(uuid()) @db.Uuid
+  status                    ApplicationStatus @default(Submitted)
+  fullName                  String
+  profession                String
+  email                     String
+  mobile                    String
+  locationCity              String?
+  experienceLevel           String
+  skills                    String[]          @default([])
+  software                  String[]          @default([])
+  portfolioLinks            String[]          @default([])
+  compensationSlug          String
+  compensationLabel         String?
+  engagementModel           String
+  availability              String[]          @default([])
+  about                     String?
+  emailVerification         Json?
+  mobileVerification        Json?
+
+  createdAtUtc DateTime  @default(now()) @db.Timestamptz(3)
+  createdBy    String?
+  updatedAtUtc DateTime? @db.Timestamptz(3)
+  updatedBy    String?
+  isDeleted    Boolean   @default(false)
+  deletedAtUtc DateTime? @db.Timestamptz(3)
+  deletedBy    String?
+  rowVersion   Int       @default(1)
+
+  @@index([status])
+  @@index([email])
+  @@map("media_professionals")
+}
+
+// ─── Manpower / Outsourcing ──────────────────────────────────────────────────
+
+model OutsourcingRequirement {
+  id                 String            @id @default(uuid()) @db.Uuid
+  status             ApplicationStatus @default(Submitted)
+  organizationName   String
+  industry           String
+  contactPerson      String
+  email              String
+  mobile             String
+  website            String?
+  companySize        CompanySize       @default(Unspecified)
+  totalHeadcount     Int               @default(0)
+  locationCity       String?
+  workMode           WorkMode?
+  startDate          DateTime?         @db.Date
+  duration           String?
+  budgetSlug         String
+  budgetLabel        String?
+  compensationNotes  String?
+  requirement        String?
+  emailVerification  Json?
+  mobileVerification Json?
+
+  roles WorkforceRole[]
+
+  createdAtUtc DateTime  @default(now()) @db.Timestamptz(3)
+  createdBy    String?
+  updatedAtUtc DateTime? @db.Timestamptz(3)
+  updatedBy    String?
+  isDeleted    Boolean   @default(false)
+  deletedAtUtc DateTime? @db.Timestamptz(3)
+  deletedBy    String?
+  rowVersion   Int       @default(1)
+
+  @@index([status])
+  @@index([email])
+  @@map("outsourcing_requirements")
+}
+
+model WorkforceRole {
+  id             String   @id @default(uuid()) @db.Uuid
+  requirementId  String   @db.Uuid
+  title          String
+  count          Int
+  skills         String[] @default([])
+  experienceLevel String?
+
+  requirement OutsourcingRequirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+
+  @@index([requirementId])
+  @@map("workforce_roles")
+}
+
+// ─── Documents ───────────────────────────────────────────────────────────────
+
+model Document {
+  id           String            @id @default(uuid()) @db.Uuid
+  fileName     String
+  mimeType     String
+  fileKind     FileKind          @default(Unknown)
+  sizeBytes    BigInt            @default(0)
+  purpose      DocumentPurpose
+  ownerType    DocumentOwnerType @default(Unassigned)
+  ownerId      String?           @db.Uuid
+  storageKey   String?
+  url          String?
+  uploadStatus UploadStatus      @default(Pending)
+  scanStatus   ScanStatus        @default(Pending)
+  error        String?
+
+  createdAtUtc DateTime  @default(now()) @db.Timestamptz(3)
+  createdBy    String?
+  updatedAtUtc DateTime? @db.Timestamptz(3)
+  updatedBy    String?
+  isDeleted    Boolean   @default(false)
+  deletedAtUtc DateTime? @db.Timestamptz(3)
+  deletedBy    String?
+  rowVersion   Int       @default(1)
+
+  @@index([ownerType, ownerId])
+  @@index([uploadStatus])
+  @@map("documents")
+}
+
+// ─── Verification (OTP) ──────────────────────────────────────────────────────
+
+model VerificationRequest {
+  id                String     @id @default(uuid()) @db.Uuid
+  verificationId    String     @unique
+  channel           OtpChannel
+  destinationHash   String
+  codeHash          String
+  purpose           OtpPurpose
+  expiresAtUtc      DateTime   @db.Timestamptz(3)
+  resendCount       Int        @default(0)
+  verifyAttempts    Int        @default(0)
+  consumed          Boolean    @default(false)
+  maxVerifyAttempts Int
+  maxResendAttempts Int
+
+  createdAtUtc DateTime  @default(now()) @db.Timestamptz(3)
+  createdBy    String?
+  updatedAtUtc DateTime? @db.Timestamptz(3)
+  updatedBy    String?
+  isDeleted    Boolean   @default(false)
+  deletedAtUtc DateTime? @db.Timestamptz(3)
+  deletedBy    String?
+  rowVersion   Int       @default(1)
+
+  @@index([expiresAtUtc])
+  @@index([purpose, channel])
+  @@map("verification_requests")
+}
+
+// ─── Notifications ───────────────────────────────────────────────────────────
+
+model NotificationDelivery {
+  id                String              @id @default(uuid()) @db.Uuid
+  channel           NotificationChannel
+  provider          String?
+  recipient         String
+  tag               String?
+  templateKey       String?
+  status            NotificationStatus  @default(Queued)
+  providerMessageId String?
+  error             String?
+  attemptCount      Int                 @default(0)
+  relatedType       String?
+  relatedId         String?             @db.Uuid
+
+  createdAtUtc DateTime  @default(now()) @db.Timestamptz(3)
+  createdBy    String?
+  updatedAtUtc DateTime? @db.Timestamptz(3)
+  updatedBy    String?
+  isDeleted    Boolean   @default(false)
+  deletedAtUtc DateTime? @db.Timestamptz(3)
+  deletedBy    String?
+  rowVersion   Int       @default(1)
+
+  @@index([status])
+  @@index([relatedType, relatedId])
+  @@map("notification_deliveries")
+}
+
+// ─── Audit (immutable) ───────────────────────────────────────────────────────
+
+model AuditLog {
+  id               String      @id @default(uuid()) @db.Uuid
+  action           AuditAction
+  entityType       String
+  entityId         String?     @db.Uuid
+  performedByUserId String?    @db.Uuid
+  detail           String?
+  occurredAtUtc    DateTime    @db.Timestamptz(3)
+
+  @@index([entityType, entityId])
+  @@index([occurredAtUtc])
+  @@index([performedByUserId])
+  @@map("audit_logs")
+}
+
+// ─── Mobile + Website unified form submissions ───────────────────────────────
+
+enum FormTypeCode {
+  BRANDING
+  CASTING_CREW
+  IT_SOLUTIONS
+  TRAINING
+  DIGITAL_MARKETING
+  SOCIAL_MEDIA
+  MANPOWER_HIRE
+  CREATIVE_CAREER
+  FILM_TV_TALENT
+  IT_CAREER
+  OFFICE_JOB
+  CONTACT
+  JOIN_NETWORK
+}
+
+enum UserKind {
+  INDUSTRY
+  CANDIDATE
+}
+
+enum SubmissionSource {
+  MOBILE
+  WEBSITE
+  ADMIN
+}
+
+enum FormSubmissionStatus {
+  Received
+  UnderReview
+  Contacted
+  InProgress
+  Closed
+  Rejected
+}
+
+model FormSubmission {
+  id              String               @id @default(uuid()) @db.Uuid
+  applicationId   String               @unique
+  formType        FormTypeCode
+  typeCode        String
+  userKind        UserKind
+  source          SubmissionSource     @default(MOBILE)
+  status          FormSubmissionStatus @default(Received)
+
+  userId          String?              @db.Uuid
+  contactName     String
+  contactEmail    String
+  contactMobile   String?
+  contactWhatsapp String?
+  companyName     String?
+
+  payload         Json
+  preferredCommunication String[]      @default([])
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  createdAtUtc DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAtUtc DateTime? @db.Timestamptz(3)
+  isDeleted    Boolean   @default(false)
+  deletedAtUtc DateTime? @db.Timestamptz(3)
+
+  @@index([formType])
+  @@index([userKind])
+  @@index([status])
+  @@index([contactEmail])
+  @@index([userId])
+  @@index([createdAtUtc])
+  @@map("form_submissions")
+}
+
+model ApplicationCounter {
+  id        String @id @default(uuid()) @db.Uuid
+  typeCode  String
+  dateYmd   String
+  lastSeq   Int    @default(0)
+
+  @@unique([typeCode, dateYmd])
+  @@map("application_counters")
+}

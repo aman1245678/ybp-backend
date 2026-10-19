@@ -1,17 +1,23 @@
-# .NET build output
-bin/
-obj/
-[Dd]ebug/
-[Rr]elease/
-*.user
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
 
-# Serilog rolling files
+# Env / secrets
+.env
+.env.*
+!.env.example
+secrets.json
+
+# Logs
 **/logs/
+*.log
 
-# Rider / VS
+# OS / IDE
+.DS_Store
+Thumbs.db
 .idea/
 .vs/
-
-# Local secrets / env overrides (never commit)
-appsettings.*.local.json
-secrets.json
+*.swp

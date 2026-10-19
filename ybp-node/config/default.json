@@ -1,0 +1,26 @@
+{
+  "port": 5041,
+  "nodeEnv": "development",
+  "cors": {
+    "allowedOrigins": [
+      "http://localhost:4200",
+      "http://127.0.0.1:4200",
+      "http://localhost:4201",
+      "http://127.0.0.1:4201",
+      "https://ybproductions.co.in",
+      "http://ybproductions.co.in"
+    ]
+  },
+  "logging": {
+    "level": "info",
+    "file": {
+      "path": "logs/ybp-%DATE%.log",
+      "maxFiles": "14d"
+    }
+  },
+  "swagger": {
+    "title": "Yashvi Bagga Productions API",
+    "description": "Backend API for the Yashvi Bagga Productions platform.",
+    "version": "1.0"
+  }
+}
